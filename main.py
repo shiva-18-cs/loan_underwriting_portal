@@ -1,3 +1,5 @@
+from urllib import response
+
 import joblib
 import pandas as pd
 import requests
@@ -147,13 +149,19 @@ def predict(data: LoanFeatures):
             "email": data.email,
             "phone": data.phone
         }
+        print("Webhook payload:", payload)
+        print("Sending webhook...")
 
         try:
-            requests.post(
+            response = requests.post(
                 "http://localhost:5678/webhook/Loan_Application",
                 json=payload,
                 timeout=5
             )
+
+            print("Status Code:", response.status_code)
+            print("Response:", response.text)
+            
         except Exception as webhook_error:
             print("Webhook Error:", webhook_error)
 
@@ -165,6 +173,7 @@ def predict(data: LoanFeatures):
             "debt_ratio": round(debt_ratio, 2),
             "loan_amount": round(loan_amount, 2)
         }
+        print("Webhooking working ")
 
     except Exception as e:
         print("ERROR OCCURRED:", repr(e))

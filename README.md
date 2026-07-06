@@ -46,7 +46,7 @@ FastAPI (main.py)
    │  reorders columns to match Loan_features.joblib
    │  model.predict(...)
    │  fires a webhook (optional lead capture) to n8n at
-   │  http://localhost:5678/webhook-test/Loan_lead
+   │  curl http://localhost:5678/webhook/Loan_Application
    ▼
 JSON { "prediction": "Approved" | "Rejected" }
    │
@@ -79,7 +79,7 @@ The form fields, field names, and JSON payload in the new UI match `LoanFeatures
 ## 5. What else you'll need before this is production-ready
 
 **Must-have:**
-1. **n8n webhook** — `main.py` posts the lead to `http://localhost:5678/webhook-test/Loan_lead`. That's a local n8n test URL; it will silently fail (caught and logged) if n8n isn't running. Either:
+1. **n8n webhook** — `main.py` posts the lead to `curl http://localhost:5678/webhook/Loan_Application`. That's a local n8n test URL; it will silently fail (caught and logged) if n8n isn't running. Either:
    - run n8n locally (`npx n8n`) and import/build that workflow, or
    - point the URL at your production webhook, or
    - remove the webhook call if you don't need lead capture.
