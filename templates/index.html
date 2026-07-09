@@ -1797,6 +1797,10 @@
           <div class="result-sub" id="resultSub">Awaiting submission.</div>
           <div class="result-actions">
             <button type="button" class="new-app-btn" id="newAppBtn" data-i18n="newApp">New application</button>
+            <button type="button" id="hearResultBtn" style="display: flex; align-items: center; justify-content: center; gap: 6px; padding: 11px; border-radius: 10px; border: 1px solid var(--dash-border); background: transparent; color: var(--text-dark-primary); font-size: 12.5px; font-weight: 600; cursor: pointer; transition: all 0.2s ease;">
+              <svg viewBox="0 0 24 24" fill="none" style="width: 14px; height: 14px; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+              <span data-i18n="hearResult">Hear Result</span>
+            </button>
           </div>
         </div>
         
@@ -1842,6 +1846,7 @@
 <script>
 (function(){
   const form = document.getElementById('loanForm');
+  let lastPredictionResult = null;
   // ---- User Session & Login Portal ----
   let currentUser = null;
   
@@ -2275,6 +2280,7 @@
       }
 
       const result = await res.json();
+      lastPredictionResult = result;
       renderResult(result);
 
     } catch(err){
@@ -2408,6 +2414,10 @@
   }
   resetBtn.addEventListener('click', resetForm);
   newAppBtn.addEventListener('click', resetForm);
+  const hearResultBtn = document.getElementById('hearResultBtn');
+  if (hearResultBtn) {
+    hearResultBtn.addEventListener('click', speakPredictionResult);
+  }
 
   // ---- Tab Switching ----
   const formTabBtn = document.querySelector('[data-tab="form"]');
@@ -2488,6 +2498,7 @@
       reviewIncome:'Income', reviewHousing:'Housing', reviewRate:'Interest Rate',
       reviewLoanRatio:'Loan/Income', reviewDefaults:'Defaults',
       reviewDefaultYes:'Has Defaulted', reviewDefaultNo:'No Record',
+      hearResult:'Hear Result',
     },
     hi: {
       brandTag:'लोन पोर्टल', statusOnline:'ऑनलाइन · v1.0',
@@ -2543,6 +2554,7 @@
       reviewIncome:'आय', reviewHousing:'आवास', reviewRate:'ब्याज दर',
       reviewLoanRatio:'लोन/आय', reviewDefaults:'चूक',
       reviewDefaultYes:'चूक हुई है', reviewDefaultNo:'कोई रिकॉर्ड नहीं',
+      hearResult:'परिणाम सुनें',
     },
     mr: {
       brandTag:'लोन पोर्टल', statusOnline:'ऑनलाइन · v1.0',
@@ -2598,6 +2610,7 @@
       reviewIncome:'उत्पन्न', reviewHousing:'घर', reviewRate:'व्याज दर',
       reviewLoanRatio:'कर्ज/उत्पन्न', reviewDefaults:'थकबाकी',
       reviewDefaultYes:'थकबाकी झाली आहे', reviewDefaultNo:'कोणतीही नोंद नाही',
+      hearResult:'निकाल ऐका',
     }
   };
 
@@ -2723,7 +2736,8 @@
   function speakBrowserTTS(text, btn) {
     if (!window.speechSynthesis) return;
     const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = 'en-US';
+    const langMap = { en: 'en-US', hi: 'hi-IN', mr: 'mr-IN' };
+    utterance.lang = langMap[currentLang] || 'en-US';
     utterance.onstart = () => {
       if (btn) btn.style.color = 'var(--emerald)';
     };
@@ -2734,6 +2748,35 @@
       if (btn) btn.style.color = 'var(--text-muted)';
     };
     window.speechSynthesis.speak(utterance);
+  }
+
+  function speakPredictionResult() {
+    if (!lastPredictionResult) return;
+    const approved = String(lastPredictionResult.prediction).toLowerCase() === 'approved';
+    const rate = fields.rate.value || '0';
+    const emi = Math.round(lastPredictionResult.emi || 0).toLocaleString(currentLang === 'en' ? 'en-US' : 'en-IN');
+    
+    let text = "";
+    if (currentLang === 'en') {
+      if (approved) {
+        text = `Loan application is approved. The offered interest rate is ${rate} percent, with an estimated monthly EMI of ${emi} Rupees. Check the summary on the right for details.`;
+      } else {
+        text = `Loan application has been declined. The requested amount does not meet current underwriting criteria. Consider lowering the interest rate or reducing the loan burden.`;
+      }
+    } else if (currentLang === 'hi') {
+      if (approved) {
+        text = `लोन आवेदन स्वीकृत हो गया है। प्रस्तावित ब्याज दर ${rate} प्रतिशत है, और अनुमानित मासिक ईएमआई ${emi} रुपये है। अधिक जानकारी के लिए दाईं ओर का सारांश देखें।`;
+      } else {
+        text = `लोन आवेदन अस्वीकृत कर दिया गया है। यह आवेदन वर्तमान वित्तीय मानदंडों को पूरा नहीं करता है। कृपया लोन राशि कम करने या क्रेडिट इतिहास सुधारने पर विचार करें।`;
+      }
+    } else if (currentLang === 'mr') {
+      if (approved) {
+        text = `कर्ज अर्ज मंजूर झाला आहे. प्रस्तावित व्याज दर ${rate} टक्के आहे, आणि अंदाजित मासिक ईएमआय ${emi} रुपये आहे. अधिक माहितीसाठी उजव्या बाजूचा सारांश पहा.`;
+      } else {
+        text = `कर्ज अर्ज नाकारण्यात आला आहे. हा अर्ज सध्याच्या वित्तीय निकषांची पूर्तता करत नाही. कृपया कर्जाची रक्कम कमी करण्याचा किंवा क्रेडिट इतिहास सुधारण्याचा विचार करा.`;
+      }
+    }
+    playTTS(text);
   }
 
   // ---- Speech Recognition ----
@@ -3162,6 +3205,7 @@
           <p style="font-size: 13.5px; color: var(--text-muted); line-height: 1.5; max-width: 40ch; margin: 0 auto 24px;">
             ${t.voiceResultDesc}
           </p>
+          <button type="button" class="reset-btn" onclick="speakPredictionResult()" style="padding: 10px 20px; background: var(--accent-lime); color: var(--bg-dark); font-weight: 700; margin-right: 12px; border: none;">🔊 ${t.hearResult || 'Hear Result'}</button>
           <button type="button" class="reset-btn" onclick="jumpToVoiceStep(0)" style="padding: 10px 20px;">${t.voiceRestartWizard}</button>
         </div>
       `;
@@ -3296,6 +3340,7 @@
       }
       
       const result = await res.json();
+      lastPredictionResult = result;
       renderResult(result);
       
       jumpToVoiceStep(11);
